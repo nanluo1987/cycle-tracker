@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#C2724F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Cycle-track</title>
+<link rel="manifest" href="manifest.json">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F5F0E8;--card:#FFFFFF;--card-border:#E8E0D4;
+  --primary:#C2724F;--primary-hover:#A8603F;--primary-light:#F3E0D5;
+  --text:#2D2B28;--text-sec:#8B8680;--text-ter:#B5AFA8;
+  --danger:#D94F4F;--danger-bg:#FDEAEA;
+  --period-red:#D97757;--period-light:rgba(226,91,91,.15);
+  --green:#0070C0;
+  --radius:16px;--radius-sm:10px;
+  --shadow:0 1px 3px rgba(45,43,40,.08),0 4px 12px rgba(45,43,40,.04);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --row-h:48px;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);
+  -webkit-tap-highlight-color:transparent;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto}
+.view{flex:1;overflow-y:auto;padding:20px 20px 24px;display:none;-webkit-overflow-scrolling:touch}
+.view.active{display:block}
+.view-title{font-size:24px;font-weight:700;margin-bottom:18px;letter-spacing:-.3px}
+
+nav{display:flex;background:var(--card);border-top:1px solid var(--card-border);
+  padding:4px 0 env(safe-area-inset-bottom,6px);flex-shrink:0}
+nav button{flex:1;background:none;border:none;font-family:var(--font);font-size:10px;
+  color:var(--text-ter);display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:7px 0;cursor:pointer;transition:color .2s}
+nav button.active{color:var(--primary)}
+nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* CYCLE */
+.cycle-wrap{display:flex;flex-direction:column;align-items:center;height:100%;
+  justify-content:space-between;padding-bottom:8px}
+.cycle-top{display:flex;flex-direction:column;align-items:center;flex:1;justify-content:center}
+.ring-container{position:relative;width:260px;height:260px;margin-bottom:8px}
+.ring-container canvas{width:100%;height:100%}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;pointer-events:none;padding:30px}
+.ring-day{font-size:16px;font-weight:600;color:var(--text-sec)}
+.ring-sub{font-size:14px;color:var(--text-sec);margin-top:8px;line-height:2}
+.cycle-bottom{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
+.cycle-btns{display:flex;gap:10px;width:100%;max-width:320px}
+.btn-sm{flex:1;padding:12px 8px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  font-family:var(--font);cursor:pointer;transition:all .2s;text-align:center}
+.btn-sm-primary{background:var(--primary);color:#fff;border:none;box-shadow:0 2px 8px rgba(194,114,79,.2)}
+.btn-sm-primary:hover{background:var(--primary-hover)}
+.btn-sm-secondary{background:var(--card);color:var(--text-sec);border:1.5px solid var(--card-border)}
+.btn-sm-secondary:hover{border-color:var(--primary);color:var(--primary)}
+.cycle-last{font-size:12px;color:var(--text-ter);margin-top:2px}
+
+/* CALENDAR */
+#viewCalendar{padding:20px 16px 16px;display:none;flex-direction:column}
+#viewCalendar.active{display:flex}
+.cal-top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.cal-top-bar h1{font-size:24px;font-weight:700;letter-spacing:-.3px}
+.cal-toggle-wrap{display:flex;align-items:center;gap:6px}
+.cal-toggle-label{font-size:10px;font-weight:600;color:var(--text-ter);text-transform:uppercase;letter-spacing:.3px}
+.cal-toggle-label.active-label{color:var(--text-sec)}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--period-red);border-radius:11px;
+  transition:background .3s;cursor:pointer}
+.toggle-track::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;
+  background:#fff;border-radius:50%;transition:transform .3s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.toggle input:checked+.toggle-track{background:var(--green)}
+.toggle input:checked+.toggle-track::after{transform:translateX(18px)}
+
+.cal-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;
+  border-bottom:1px solid var(--card-border);padding:10px 4px 8px;flex-shrink:0}
+.cal-dow{font-size:11px;font-weight:600;color:var(--text-ter)}
+.cal-scroll{height:calc(var(--row-h)*7);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  scroll-behavior:auto;position:relative}
+.cal-scroll::-webkit-scrollbar{display:none}
+.cal-scroll{-ms-overflow-style:none;scrollbar-width:none}
+.cal-week{display:grid;grid-template-columns:repeat(7,1fr);height:var(--row-h)}
+.cal-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;font-size:14px;cursor:default;user-select:none}
+.cal-cell .cal-num{width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;position:relative;z-index:1;transition:background .2s,color .2s}
+.cal-cell .cal-mlabel{position:absolute;top:-4px;font-size:8px;font-weight:700;color:var(--primary);
+  letter-spacing:.3px;z-index:2;white-space:nowrap}
+.cal-cell.today .cal-num{box-shadow:inset 0 0 0 2px #FBD30D;color:#FBD30D;font-weight:700}
+.cal-cell.period .cal-num{background:#D97757;color:#fff;font-weight:600}
+.cal-cell.period.today .cal-num{box-shadow:inset 0 0 0 3px #FBD30D;width:36px;height:36px}
+.cal-cell.predicted .cal-num{background:rgba(155,64,48,.12);color:#D97757;font-weight:500}
+.cal-cell.predicted.today .cal-num{box-shadow:inset 0 0 0 2px #D97757}
+/* probability mode */
+.cal-cell.prob .cal-num{color:#fff;font-weight:600}
+.cal-cell.prob.today .cal-num{box-shadow:inset 0 0 0 2px #1a5ab5}
+
+.cal-today-btn{display:block;margin:14px auto 0;background:var(--card);border:1px solid var(--card-border);
+  border-radius:var(--radius-sm);padding:7px 22px;font-size:12px;font-weight:500;color:var(--text-sec);
+  font-family:var(--font);cursor:pointer;transition:all .2s;box-shadow:var(--shadow)}
+.cal-today-btn:hover{border-color:var(--primary);color:var(--primary)}
+
+/* LOG */
+.log-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.log-actions{display:flex;gap:8px}
+.log-actions button{background:none;border:1px solid var(--card-border);border-radius:var(--radius-sm);
+  padding:5px 10px;font-size:11px;font-weight:500;font-family:var(--font);color:var(--text-sec);
+  cursor:pointer;transition:all .2s}
+.log-actions button:hover{border-color:var(--primary);color:var(--primary)}
+.log-list{display:flex;flex-direction:column;gap:10px}
+.log-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);
+  padding:14px 16px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center}
+.log-card-info h3{font-size:14px;font-weight:600;margin-bottom:2px;font-variant-numeric:tabular-nums}
+.log-card-info p{font-size:12px;color:var(--text-sec)}
+.log-card-actions{display:flex;gap:4px}
+.log-card-actions button{background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;
+  transition:background .2s;color:var(--text-ter)}
+.log-card-actions button:hover{background:var(--primary-light);color:var(--primary)}
+.log-card-actions button.del:hover{background:var(--danger-bg);color:var(--danger)}
+.log-card-actions svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-ter);font-size:14px}
+.tag-ongoing{display:inline-block;background:var(--primary-light);color:var(--primary);
+  font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:4px}
+
+/* STATS */
+.stats-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);
+  padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.stats-card h3{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-sec)}
+.stats-avg{text-align:center;padding:10px;font-size:14px;color:var(--text-sec)}
+.stats-avg strong{font-size:28px;color:var(--primary);font-weight:700}
+.chart-wrap{width:100%;overflow-x:auto}
+canvas{display:block}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(45,43,40,.35);display:flex;
+  align-items:flex-end;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.show{opacity:1;pointer-events:auto}
+.modal{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:480px;
+  padding:24px 24px env(safe-area-inset-bottom,20px);transform:translateY(100%);
+  transition:transform .3s cubic-bezier(.33,1,.68,1)}
+.modal-overlay.show .modal{transform:translateY(0)}
+.modal h2{font-size:17px;font-weight:700;margin-bottom:16px}
+.modal label{display:block;font-size:12px;color:var(--text-sec);margin-bottom:5px;font-weight:500}
+.modal input[type="date"]{width:100%;padding:11px 14px;border:1.5px solid var(--card-border);
+  border-radius:var(--radius-sm);font-size:15px;font-family:var(--font);color:var(--text);
+  background:var(--bg);outline:none;transition:border-color .2s;-webkit-appearance:none}
+.modal input[type="date"]:focus{border-color:var(--primary)}
+.modal-btns{display:flex;gap:10px;margin-top:18px}
+.modal-btns button{flex:1;padding:12px;border:none;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .2s}
+.modal-btns .m-cancel{background:var(--bg);color:var(--text-sec)}
+.modal-btns .m-confirm{background:var(--primary);color:#fff}
+.modal-btns .m-confirm:hover{background:var(--primary-hover)}
+.modal-btns .m-delete{background:var(--danger);color:#fff}
+.toast{position:fixed;top:50px;left:50%;transform:translateX(-50%) translateY(-20px);
+  background:var(--text);color:#fff;padding:9px 20px;border-radius:40px;font-size:12px;
+  font-weight:500;opacity:0;transition:all .3s;z-index:200;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#importInput{display:none}
+@media(min-width:481px){.modal{border-radius:20px;margin-bottom:20px}}
+</style>
+</head>
+<body>
+<div id="app"><!-- CYCLE -->
+  <div id="viewCycle" class="view active">
+    <div class="cycle-wrap">
+      <div class="cycle-top">
+        <div class="ring-container">
+          <canvas id="ringCanvas"></canvas>
+          <div class="ring-center">
+            <div class="ring-day" id="ringDay">--</div>
+            <div class="ring-sub" id="ringSub"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cycle-bottom">
+        <div class="cycle-btns">
+          <button class="btn-sm btn-sm-primary" id="btnToday">Period starts today</button>
+          <button class="btn-sm btn-sm-secondary" id="btnOther">Choose another day</button>
+        </div><div class="cycle-last" id="cycleLast"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div id="viewCalendar" class="view">
+    <div class="cal-top-bar">
+      <h1>Calendar</h1>
+      <div class="cal-toggle-wrap">
+        <span class="cal-toggle-label active-label" id="lblA">Predict</span>
+        <label class="toggle">
+          <input type="checkbox" id="calModeToggle">
+          <span class="toggle-track"></span>
+        </label>
+        <span class="cal-toggle-label" id="lblB">Probability</span>
+      </div></div>
+    <div class="cal-card">
+      <div class="cal-dow-row">
+        <div class="cal-dow">Mon</div><div class="cal-dow">Tue</div><div class="cal-dow">Wed</div>
+        <div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div>
+        <div class="cal-dow">Sun</div>
+      </div>
+      <div class="cal-scroll" id="calScroll"></div>
+    </div>
+    <button class="cal-today-btn" id="calTodayBtn">Today</button>
+  </div>
+
+  <!-- LOG -->
+  <div id="viewLog" class="view">
+    <div class="log-header">
+      <h1 class="view-title">Log</h1>
+      <div class="log-actions">
+        <button id="btnImport">↓ Import</button>
+        <button id="btnExport">↑ Export</button>
+      </div>
+    </div>
+    <div class="log-list" id="logList"></div>
+    <input type="file" id="importInput" accept=".json">
+  </div>
+
+  <!-- STATS -->
+  <div id="viewStats" class="view">
+    <h1 class="view-title">Stats</h1>
+    <div id="statsContent"></div>
+  </div>
+
+  <!-- NAV -->
+  <nav>
+    <button class="active" data-view="viewCycle">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Cycle
+    </button>
+    <button data-view="viewCalendar">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>Calendar
+    </button>
+    <button data-view="viewLog">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Log
+    </button>
+    <button data-view="viewStats">
+      <svg viewBox="0 0 24 24"><rect x="4" y="14" width="4" height="6" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg>Stats
+    </button>
+  </nav>
+</div>
+
+<div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalContent"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/*========== DATA ========== */
+const SK='cycle_track_records',PD=4;
+const MSHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function load(){try{return JSON.parse(localStorage.getItem(SK))||[]}catch{return[]}}
+function save(r){r.sort((a,b)=>a.localeCompare(b));localStorage.setItem(SK,JSON.stringify(r))}
+function addRec(d){const r=load();if(r.includes(d)){toast('该日期已存在记录');return false}r.push(d);save(r);return true}
+function delRec(d){save(load().filter(x=>x!==d))}
+function editRec(o,n){let r=load();if(o!==n&&r.includes(n)){toast('该日期已存在记录');return false}save(r.map(x=>x===o?n:x));return true}
+function dBet(a,b){return Math.round((new Date(b)-new Date(a))/864e5)}
+function todayS(){const d=new Date();return d.getFullYear()+'-'+Z(d.getMonth()+1)+'-'+Z(d.getDate())}
+function Z(n){return String(n).padStart(2,'0')}
+function addDays(s,n){const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+Z(d.getMonth()+1)+'-'+Z(d.getDate())}
+function dateToStr(d){return d.getFullYear()+'-'+Z(d.getMonth()+1)+'-'+Z(d.getDate())}
+function shortDate(s){const d=new Date(s+'T00:00:00');return MSHORT[d.getMonth()]+' '+Z(d.getDate())}
+function getAvg(){const r=load();if(r.length<2)return null;let s=0;for(let i=1;i<r.length;i++)s+=dBet(r[i-1],r[i]);return Math.round(s/(r.length-1))}
+
+function getPeriodSet(){const r=load(),s=new Set();r.forEach(d=>{for(let i=0;i<PD;i++)s.add(addDays(d,i))});return s}
+function getPredictedSet(){const r=load(),avg=getAvg(),s=new Set();
+  if(!r.length||!avg)return s;
+  const last=r[r.length-1],td=todayS();
+  for(let c=1;c<=12;c++){const st=addDays(last,avg*c);for(let i=0;i<PD;i++){const dd=addDays(st,i);if(dd>td)s.add(dd)}}
+  return s;
+}
+
+/* Probability distribution for next period start day */
+function getProbMap(){
+  // returns Map<dateString, probability0-1>
+  const r=load(),map=new Map();
+  if(r.length<2)return map;
+  const cycles=[];
+  for(let i=0;i<r.length-1;i++) cycles.push(dBet(r[i],r[i+1]));
+  const last=r[r.length-1],td=todayS();
+  // count frequency of each cycle length
+  const freq=new Map();
+  cycles.forEach(l=>{freq.set(l,(freq.get(l)||0)+1)});
+  const total=cycles.length;
+  let maxProb=0;
+  freq.forEach((count,len)=>{
+    const p=count/total;
+    if(p>maxProb)maxProb=p;
+    const dateStr=addDays(last,len);
+    if(dateStr>td) map.set(dateStr,(map.get(dateStr)||0)+p);
+  });
+  // normalise so max = 1
+  if(maxProb>0){
+    let realMax=0;
+    map.forEach(v=>{if(v>realMax)realMax=v});
+    if(realMax>0){
+      const norm=new Map();
+      map.forEach((v,k)=>norm.set(k,v/realMax));
+      return norm;
+    }
+  }
+  return map;
+}
+
+/* ========== TOAST / MODAL ========== */
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+function showModal(h){document.getElementById('modalContent').innerHTML=h;document.getElementById('modalOverlay').classList.add('show')}
+function hideModal(){document.getElementById('modalOverlay').classList.remove('show')}
+document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)hideModal()});
+
+/* ========== NAV ========== */
+const viewFns={viewCycle:renderCycle,viewCalendar:renderCalendar,viewLog:renderLog,viewStats:renderStats};
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(b.dataset.view).classList.add('active');
+  viewFns[b.dataset.view]();
+}));
+
+/* ========== CYCLE VIEW ========== */
+function renderCycle(){
+  const r=load(),ringDay=document.getElementById('ringDay'),ringSub=document.getElementById('ringSub'),lastEl=document.getElementById('cycleLast');
+  const avg=getAvg();
+  if(!r.length){ringDay.textContent='--';ringSub.textContent='No records yet';lastEl.textContent='';drawRing(0,false);return}
+  const latest=r[r.length-1],td=todayS(),ds=dBet(latest,td),cd=ds+1;
+  ringDay.textContent='CYCLE DAY '+cd;
+  lastEl.textContent='Last period started: '+latest;
+  if(avg){
+    const nx=addDays(latest,avg),du=dBet(td,nx);
+    if(du>0)ringSub.innerHTML='Next period expected in<br><span style="color:#C2724F;font-weight:700;font-size:18px">'+du+(du===1?' day':' days')+'</span><br><span style="color:#C2724F;font-weight:700">'+nx+'</span>';
+    else if(du===0)ringSub.innerHTML='Next period expected<br><span style="color:#C2724F;font-weight:700;font-size:18px">today</span>';
+    else ringSub.innerHTML='Period is<br><span style="color:#C2724F;font-weight:700;font-size:18px"> '+(-du)+(du===-1?' day':' days')+' late</span>';
+    drawRing(ds/avg,ds/avg>1);
+  }else{ringSub.textContent='';drawRing(0,false)}
+}
+function drawRing(progress,overdue){
+  const c=document.getElementById('ringCanvas'),ctx=c.getContext('2d'),dpr=window.devicePixelRatio||1;
+  c.width=260*dpr;c.height=260*dpr;c.style.width='260px';c.style.height='260px';
+  ctx.scale(dpr,dpr);
+  const cx=130,cy=130,r=108,lw=13,startA=-Math.PI/2;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='#E8E0D4';ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
+  if(progress<=0)return;
+  if(progress<=1){
+    ctx.beginPath();ctx.arc(cx,cy,r,startA,startA+progress*Math.PI*2);
+    ctx.strokeStyle='#C2724F';ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
+  }else{
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='rgba(217,79,79,.2)';ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
+    const over=Math.min(progress-1,1);
+    ctx.beginPath();ctx.arc(cx,cy,r,startA,startA+over*Math.PI*2);
+    ctx.strokeStyle='#D94F4F';ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
+  }
+}
+document.getElementById('btnToday').addEventListener('click',()=>{if(addRec(todayS())){toast('Recorded!');renderCycle()}});
+document.getElementById('btnOther').addEventListener('click',()=>{
+  showModal(`<h2>Select date</h2><label>Period start date</label><input type="date" id="pickDate" value="${todayS()}" max="${todayS()}">
+    <div class="modal-btns"><button class="m-cancel" onclick="hideModal()">Cancel</button>
+    <button class="m-confirm" id="cpick">Confirm</button></div>`);
+  document.getElementById('cpick').addEventListener('click',()=>{
+    const v=document.getElementById('pickDate').value;if(!v){toast('Please select a date');return}
+    if(addRec(v)){hideModal();toast('Recorded!');renderCycle()}
+  });
+});
+
+/* ========== CALENDAR VIEW ========== */
+let calStartWeek=-52,calEndWeek=52,calTodayMonday=null,calScrollEl=null,calIsAdding=false;
+let calMode='predict'; // 'predict' or 'prob'
+
+function getMonday(d){const dt=new Date(d);const day=dt.getDay();const diff=(day===0?-6:1-day);dt.setDate(dt.getDate()+diff);dt.setHours(0,0,0,0);return dt}
+
+function greenForProb(p){
+  // p:0..1 → light blue to dark blue
+  const lo=[232,242,249], hi=[0,112,192];
+  const r=Math.round(lo[0]+(hi[0]-lo[0])*p);
+  const g=Math.round(lo[1]+(hi[1]-lo[1])*p);
+  const b=Math.round(lo[2]+(hi[2]-lo[2])*p);
+  return `rgb(${r},${g},${b})`;
+}
+
+function buildWeekHTML(mondayDate,td,periodSet,predictedSet,probMap){
+  let html='<div class="cal-week">';
+  for(let i=0;i<7;i++){
+    const d=new Date(mondayDate);d.setDate(d.getDate()+i);
+    const ds=dateToStr(d);
+    const dn=d.getDate();
+    let cls='cal-cell';
+    if(ds===td) cls+=' today';
+    if(periodSet.has(ds)) cls+=' period';
+    else if(calMode==='predict'&&predictedSet.has(ds)) cls+=' predicted';
+
+    let style='';
+    const probVal=probMap.get(ds);
+    const isProb=calMode==='prob'&&probVal!==undefined&&!periodSet.has(ds);
+    if(isProb){
+      cls+=' prob';
+      style=`style="background:${greenForProb(probVal)}"`;
+    }
+    let mlabel='';
+    if(dn===1) mlabel=`<span class="cal-mlabel">${MSHORT[d.getMonth()]} ${d.getFullYear()}</span>`;
+    html+=`<div class="${cls}">${mlabel}<span class="cal-num" ${isProb?style:''}>${dn}</span></div>`;
+  }
+  return html+'</div>';
+}
+
+function renderCalendar(){
+  calScrollEl=document.getElementById('calScroll');
+  calTodayMonday=getMonday(todayS()+'T00:00:00');
+  calStartWeek=-52;calEndWeek=52;
+  buildFullCal();
+  scrollCalToToday(false);
+  calScrollEl.removeEventListener('scroll',onCalScroll);
+  calScrollEl.addEventListener('scroll',onCalScroll,{passive:true});
+  updateToggleLabels();
+}
+
+function buildFullCal(){
+  const td=todayS(),pSet=getPeriodSet(),prSet=getPredictedSet(),probMap=getProbMap();
+  let html='';
+  for(let w=calStartWeek;w<=calEndWeek;w++){
+    const mon=new Date(calTodayMonday);mon.setDate(mon.getDate()+w*7);
+    html+=buildWeekHTML(mon,td,pSet,prSet,probMap);
+  }
+  calScrollEl.innerHTML=html;
+}
+
+function scrollCalToToday(smooth){
+  if(!calScrollEl)return;
+  const rowH=calScrollEl.querySelector('.cal-week').offsetHeight;
+  const idx=0-calStartWeek;
+  calScrollEl.scrollTo({top:idx*rowH-2*rowH,behavior:smooth?'smooth':'auto'});
+}
+
+function onCalScroll(){
+  if(calIsAdding)return;
+  const el=calScrollEl;
+  const rowH=el.querySelector('.cal-week')?.offsetHeight||48;
+  const td=todayS(),pSet=getPeriodSet(),prSet=getPredictedSet(),probMap=getProbMap();
+  if(el.scrollTop<rowH*5){
+    calIsAdding=true;
+    const count=26;let frag='';
+    for(let w=calStartWeek-count;w<calStartWeek;w++){
+      const mon=new Date(calTodayMonday);mon.setDate(mon.getDate()+w*7);
+      frag+=buildWeekHTML(mon,td,pSet,prSet,probMap);
+    }
+    const prevH=el.scrollHeight;
+    el.insertAdjacentHTML('afterbegin',frag);
+    el.scrollTop+=el.scrollHeight-prevH;
+    calStartWeek-=count;
+    calIsAdding=false;
+  }if(el.scrollTop+el.clientHeight>el.scrollHeight-rowH*5){
+    calIsAdding=true;
+    const count=26;let frag='';
+    for(let w=calEndWeek+1;w<=calEndWeek+count;w++){
+      const mon=new Date(calTodayMonday);mon.setDate(mon.getDate()+w*7);
+      frag+=buildWeekHTML(mon,td,pSet,prSet,probMap);
+    }
+    el.insertAdjacentHTML('beforeend',frag);
+    calEndWeek+=count;
+    calIsAdding=false;
+  }
+}
+
+function updateToggleLabels(){
+  const a=document.getElementById('lblA'),b=document.getElementById('lblB');
+  if(calMode==='predict'){a.classList.add('active-label');b.classList.remove('active-label')}
+  else{b.classList.add('active-label');a.classList.remove('active-label')}
+}
+
+document.getElementById('calModeToggle').addEventListener('change',e=>{
+  calMode=e.target.checked?'prob':'predict';
+  updateToggleLabels();
+  // preserve scroll position
+  if(calScrollEl){
+    const st=calScrollEl.scrollTop;
+    buildFullCal();
+    calScrollEl.scrollTop=st;
+  }
+});
+document.getElementById('calTodayBtn').addEventListener('click',()=>scrollCalToToday(true));
+
+/* ========== LOG VIEW ========== */
+function renderLog(){
+  const r=load(),list=document.getElementById('logList');
+  if(!r.length){list.innerHTML='<div class="empty-state">No records yet</div>';return}
+  let html='';
+  for(let i=r.length-1;i>=0;i--){
+    const s=r[i],isLast=i===r.length-1;
+    const cl=isLast?'<span class="tag-ongoing">Ongoing</span>':(dBet(r[i],r[i+1])+' days');
+    html+=`<div class="log-card"><div class="log-card-info"><h3>${s}<span style="color:var(--text-sec);font-weight:400;font-size:12px;margin-left:10px"> ${cl}</span></h3></div>
+      <div class="log-card-actions">
+        <button onclick="openEdit('${s}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="del" onclick="openDel('${s}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </div></div>`;
+  }
+  list.innerHTML=html;
+}
+function openEdit(d){
+  showModal(`<h2>Edit record</h2><label>Period start date</label>
+    <input type="date" id="editDate" value="${d}" max="${todayS()}">
+    <div class="modal-btns"><button class="m-cancel" onclick="hideModal()">Cancel</button>
+    <button class="m-confirm" id="cedit">Save</button></div>`);
+  document.getElementById('cedit').addEventListener('click',()=>{
+    const v=document.getElementById('editDate').value;if(!v){toast('Please select a date');return}
+    if(editRec(d,v)){hideModal();toast('Updated!');renderLog()}
+  });
+}
+function openDel(d){
+  showModal(`<h2>Delete record</h2><p style="color:var(--text-sec);font-size:13px">Delete record for <strong>${d}</strong>?</p>
+    <div class="modal-btns"><button class="m-cancel" onclick="hideModal()">Cancel</button>
+    <button class="m-delete" id="cdel">Delete</button></div>`);
+  document.getElementById('cdel').addEventListener('click',()=>{delRec(d);hideModal();toast('Deleted');renderLog()});
+}
+document.getElementById('btnExport').addEventListener('click',()=>{
+  const r=load();if(!r.length){toast('No data');return}
+  const b=new Blob([JSON.stringify({version:1,records:r},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cycle-track-'+todayS()+'.json';a.click();
+  URL.revokeObjectURL(a.href);toast('Exported!');
+});
+document.getElementById('btnImport').addEventListener('click',()=>document.getElementById('importInput').click());
+document.getElementById('importInput').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=ev=>{try{
+    const data=JSON.parse(ev.target.result),recs=data.records||data;if(!Array.isArray(recs))throw0;
+    const valid=recs.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!isNaN(new Date(d+'T00:00:00')));
+    const ex=new Set(load());valid.forEach(d=>ex.add(d));save([...ex]);
+    toast('Imported '+valid.length+' records');renderLog();
+  }catch{toast('Invalid file')}};rd.readAsText(f);e.target.value='';
+});
+
+/* ========== STATS VIEW ========== */
+function renderStats(){
+  const r=load(),ct=document.getElementById('statsContent');
+  const cycles=[];for(let i=0;i<r.length-1;i++)cycles.push({start:r[i],length:dBet(r[i],r[i+1])});
+  const avg=getAvg();
+  if(cycles.length<1){ct.innerHTML='<div class="empty-state">Need at least 2 records to show statistics</div>';return}
+
+  const lengths=cycles.map(c=>c.length);
+  const minL=Math.min(...lengths),maxL=Math.max(...lengths);
+  const padL=Math.max(minL-2,1),padR=maxL+2,bk=padR-padL+1;
+  const freq=new Array(bk).fill(0);lengths.forEach(l=>freq[l-padL]++);
+  const prob=freq.map(f=>f/lengths.length),maxP=Math.max(...prob);
+
+  // compute predicted dates for each bar based on last period
+  const last=r[r.length-1];
+
+  const avgExact=(cycles.reduce((a,c)=>a+c.length,0)/cycles.length).toFixed(1);
+  ct.innerHTML=`
+    <div class="stats-card"><h3>Average cycle length</h3><div class="stats-avg"><strong>${avgExact}</strong> days</div></div>
+    <div class="stats-card"><h3>Cycle length distribution</h3><div class="chart-wrap"><canvas id="chartC"></canvas></div></div>`;
+
+  const dpr=window.devicePixelRatio||1;
+  const container=document.querySelector('#chartC').parentElement;
+  const cw=Math.min(container.clientWidth,440);
+  const mL=50,mR=16,mT=40,gap=32,barH=140;
+  const dotH=Math.max(120,cycles.length*20+40);
+  const totalH=mT+barH+gap+dotH+36;
+  const plotW=cw-mL-mR,bw=Math.max(plotW/bk-2,6);
+
+  const canvas=document.getElementById('chartC');
+  canvas.width=cw*dpr;canvas.height=totalH*dpr;canvas.style.width=cw+'px';canvas.style.height=totalH+'px';
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  const ff=getComputedStyle(document.body).fontFamily;
+  const pc='#C2724F',gc='#E8E0D4',tc='#8B8680',td2='#2D2B28';
+
+  function xP(v){return mL+(v-padL+.5)*(plotW/bk)}
+
+  // date labels above bars
+  ctx.save();
+  ctx.textAlign='center';
+  ctx.fillStyle=tc;
+  for(let d=padL;d<=padR;d++){
+    const dateStr=addDays(last,d);
+    const dt=new Date(dateStr+'T00:00:00');
+    const mon=MSHORT[dt.getMonth()];
+    const day=Z(dt.getDate());
+    const x=xP(d);
+    ctx.font='7px '+ff;
+    ctx.textBaseline='bottom';
+    ctx.fillText(mon,x,mT-15);
+    ctx.font='bold 10px '+ff;
+    ctx.fillText(day,x,mT-3);
+  }
+  ctx.restore();
+
+  const barBase=mT+barH;
+  [0,.25,.5,.75,1].forEach(t=>{
+    const v=t*maxP,y=barBase-(v/maxP)*barH*.85;
+    ctx.strokeStyle=gc;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(mL,y);ctx.lineTo(cw-mR,y);ctx.stroke();
+    ctx.fillStyle=tc;ctx.font='9px '+ff;ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.fillText((v*100).toFixed(0)+'%',mL-5,y);
+  });
+  prob.forEach((p,i)=>{if(!p)return;const x=xP(padL+i)-bw/2,h=(p/maxP)*barH*.85;
+    ctx.fillStyle=pc;const rr=Math.min(3,bw/2);
+    ctx.beginPath();ctx.moveTo(x+rr,barBase-h);ctx.arcTo(x+bw,barBase-h,x+bw,barBase,rr);
+    ctx.lineTo(x+bw,barBase);ctx.lineTo(x,barBase);ctx.arcTo(x,barBase-h,x+bw,barBase-h,rr);ctx.fill();
+  });
+  ctx.textAlign='center';ctx.textBaseline='top';
+  for(let d=padL;d<=padR;d++){
+    ctx.fillStyle=lengths.includes(d)?td2:tc;
+    ctx.font=(lengths.includes(d)?'bold ':'')+'9px '+ff;
+    ctx.fillText(d,xP(d),barBase+4);
+  }
+  ctx.fillStyle=tc;ctx.font='9px '+ff;ctx.fillText('Days',mL+plotW/2,barBase+18);
+
+  // dot chart
+  const dTop=barBase+gap;const sorted=[...cycles].reverse();
+  const pY=16,yS=cycles.length>1?(dotH-pY*2)/(cycles.length-1):0;
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  sorted.forEach((c,i)=>{const y=dTop+pY+i*yS;
+    ctx.strokeStyle=gc;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(mL,y);ctx.lineTo(cw-mR,y);ctx.stroke();
+    ctx.fillStyle=tc;ctx.font='9px '+ff;ctx.fillText(c.start,mL-5,y);
+  });
+  ctx.strokeStyle=pc;ctx.lineWidth=2;ctx.beginPath();
+  sorted.forEach((c,i)=>{const x=xP(c.length),y=dTop+pY+i*yS;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+  ctx.stroke();
+  sorted.forEach((c,i)=>{const x=xP(c.length),y=dTop+pY+i*yS;
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=pc;ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();
+  });
+}
+
+/* ========== INIT ========== */
+renderCycle();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
