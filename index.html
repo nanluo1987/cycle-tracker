@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#C2724F">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cycle Track">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Cycle-track</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -354,14 +357,66 @@ function drawRing(progress,overdue){
     ctx.strokeStyle='#D94F4F';ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
   }
 }
-document.getElementById('btnToday').addEventListener('click',()=>{if(addRec(todayS())){toast('Recorded!');renderCycle()}});
+/* ========== CALENDAR REMINDER ========== */
+function getNextPredicted(){
+  const r=load(),avg=getAvg();
+  if(!r.length||!avg)return null;
+  return addDays(r[r.length-1],avg);
+}
+function generateICS(nextDate){
+  const dt=nextDate.replace(/-/g,'');
+  const uid='cycle-'+dt+'@cycle-track';
+  const now=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  return [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Cycle Track//EN',
+    'CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    'UID:'+uid,'DTSTAMP:'+now,
+    'DTSTART;VALUE=DATE:'+dt,'DTEND;VALUE=DATE:'+dt,
+    'SUMMARY:🩸 Period expected today',
+    'DESCRIPTION:Your next period is expected to start around this date.',
+    'BEGIN:VALARM','TRIGGER:-P3D','ACTION:DISPLAY',
+    'DESCRIPTION:Period expected in 3 days 🩸',
+    'END:VALARM','END:VEVENT','END:VCALENDAR'
+  ].join('\r\n');
+}
+function downloadICS(nextDate){
+  const blob=new Blob([generateICS(nextDate)],{type:'text/calendar;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='period-reminder.ics';a.click();URL.revokeObjectURL(a.href);
+}
+function showCalendarPrompt(){
+  const next=getNextPredicted();
+  if(!next){toast('Recorded!');return;}
+  showModal(`
+    <h2>Recorded! 🎉</h2>
+    <p style="color:var(--text-sec);font-size:13px;margin-bottom:16px;line-height:1.6">
+      Your next period is predicted on<br>
+      <strong style="color:var(--primary);font-size:15px">${next}</strong>
+    </p>
+    <p style="color:var(--text-sec);font-size:12px;margin-bottom:4px;line-height:1.6">
+      Add a reminder to your calendar?<br>
+      <span style="color:var(--text-ter)">You'll be reminded 3 days before.</span>
+    </p>
+    <div class="modal-btns">
+      <button class="m-cancel" onclick="hideModal()">Skip</button>
+      <button class="m-confirm" id="cAddCal">Add to Calendar</button>
+    </div>`);
+  document.getElementById('cAddCal').addEventListener('click',()=>{
+    downloadICS(next);hideModal();toast('Opening Calendar…');
+  });
+}
+
+document.getElementById('btnToday').addEventListener('click',()=>{
+  if(addRec(todayS())){renderCycle();showCalendarPrompt()}
+});
 document.getElementById('btnOther').addEventListener('click',()=>{
   showModal(`<h2>Select date</h2><label>Period start date</label><input type="date" id="pickDate" value="${todayS()}" max="${todayS()}">
     <div class="modal-btns"><button class="m-cancel" onclick="hideModal()">Cancel</button>
     <button class="m-confirm" id="cpick">Confirm</button></div>`);
   document.getElementById('cpick').addEventListener('click',()=>{
     const v=document.getElementById('pickDate').value;if(!v){toast('Please select a date');return}
-    if(addRec(v)){hideModal();toast('Recorded!');renderCycle()}
+    if(addRec(v)){hideModal();renderCycle();showCalendarPrompt()}
   });
 });
 
