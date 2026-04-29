@@ -35,7 +35,7 @@ nav{display:flex;background:var(--card);border-top:1px solid var(--card-border);
   padding:4px 0 env(safe-area-inset-bottom,6px);flex-shrink:0}
 nav button{flex:1;background:none;border:none;font-family:var(--font);font-size:10px;
   color:var(--text-ter);display:flex;flex-direction:column;align-items:center;gap:2px;
-  padding:7px 0;cursor:pointer;transition:color .2s}
+  padding:10px 0;cursor:pointer;transition:color .2s}
 nav button.active{color:var(--primary)}
 nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
@@ -44,15 +44,15 @@ nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width
 .cycle-wrap{display:flex;flex-direction:column;align-items:center;height:100%;
   justify-content:space-between;padding-bottom:8px}
 .cycle-top{display:flex;flex-direction:column;align-items:center;flex:1;justify-content:center}
-.ring-container{position:relative;width:260px;height:260px;margin-bottom:8px}
+.ring-container{position:relative;width:312px;height:312px;margin-bottom:8px}
 .ring-container canvas{width:100%;height:100%}
 .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
   justify-content:center;text-align:center;pointer-events:none;padding:30px}
-.ring-day{font-size:16px;font-weight:600;color:var(--text-sec)}
-.ring-sub{font-size:14px;color:var(--text-sec);margin-top:8px;line-height:2}
+.ring-day{font-size:18px;font-weight:600;color:var(--text-sec)}
+.ring-sub{font-size:16px;color:var(--text-sec);margin-top:8px;line-height:2}
 .cycle-bottom{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
-.cycle-btns{display:flex;gap:10px;width:100%;max-width:320px}
-.btn-sm{flex:1;padding:12px 8px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+.cycle-btns{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:320px}
+.btn-sm{width:50%;padding:13px 8px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
   font-family:var(--font);cursor:pointer;transition:all .2s;text-align:center}
 .btn-sm-primary{background:var(--primary);color:#fff;border:none;box-shadow:0 2px 8px rgba(194,114,79,.2)}
 .btn-sm-primary:hover{background:var(--primary-hover)}
@@ -108,13 +108,15 @@ nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width
 .cal-today-btn:hover{border-color:var(--primary);color:var(--primary)}
 
 /* LOG */
-.log-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+#viewLog{overflow:hidden!important;display:none;flex-direction:column;padding-bottom:0!important}
+#viewLog.active{display:flex}
+.log-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0}
 .log-actions{display:flex;gap:8px}
 .log-actions button{background:none;border:1px solid var(--card-border);border-radius:var(--radius-sm);
   padding:5px 10px;font-size:11px;font-weight:500;font-family:var(--font);color:var(--text-sec);
   cursor:pointer;transition:all .2s}
 .log-actions button:hover{border-color:var(--primary);color:var(--primary)}
-.log-list{display:flex;flex-direction:column;gap:10px}
+.log-list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;padding-bottom:20px;-webkit-overflow-scrolling:touch}
 .log-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);
   padding:14px 16px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center}
 .log-card-info h3{font-size:14px;font-weight:600;margin-bottom:2px;font-variant-numeric:tabular-nums}
@@ -131,6 +133,12 @@ nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width
   font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:4px}
 
 /* STATS */
+#viewStats{overflow:hidden!important;display:none;flex-direction:column;padding-bottom:0!important}
+#viewStats.active{display:flex}
+#viewStats .view-title{flex-shrink:0}
+#statsContent{display:flex;flex-direction:column;flex:1;overflow:hidden;padding-bottom:0}
+#statsFixed{flex-shrink:0}
+#dotChartWrap{overflow-y:auto;flex:1;padding-bottom:20px;-webkit-overflow-scrolling:touch}
 .stats-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);
   padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
 .stats-card h3{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-sec)}
@@ -334,17 +342,17 @@ function renderCycle(){
   lastEl.textContent='Last period started: '+latest;
   if(avg){
     const nx=addDays(latest,avg),du=dBet(td,nx);
-    if(du>0)ringSub.innerHTML='Next period expected in<br><span style="color:#C2724F;font-weight:700;font-size:18px">'+du+(du===1?' day':' days')+'</span><br><span style="color:#C2724F;font-weight:700">'+nx+'</span>';
-    else if(du===0)ringSub.innerHTML='Next period expected<br><span style="color:#C2724F;font-weight:700;font-size:18px">today</span>';
-    else ringSub.innerHTML='Period is<br><span style="color:#C2724F;font-weight:700;font-size:18px"> '+(-du)+(du===-1?' day':' days')+' late</span>';
+    if(du>0)ringSub.innerHTML='Next period expected in<br><span style="color:#C2724F;font-weight:700;font-size:22px">'+du+(du===1?' day':' days')+'</span><br><span style="color:#C2724F;font-weight:700">'+nx+'</span>';
+    else if(du===0)ringSub.innerHTML='Next period expected<br><span style="color:#C2724F;font-weight:700;font-size:22px">today</span>';
+    else ringSub.innerHTML='Period is<br><span style="color:#C2724F;font-weight:700;font-size:22px"> '+(-du)+(du===-1?' day':' days')+' late</span>';
     drawRing(ds/avg,ds/avg>1);
   }else{ringSub.textContent='';drawRing(0,false)}
 }
 function drawRing(progress,overdue){
   const c=document.getElementById('ringCanvas'),ctx=c.getContext('2d'),dpr=window.devicePixelRatio||1;
-  c.width=260*dpr;c.height=260*dpr;c.style.width='260px';c.style.height='260px';
+  c.width=312*dpr;c.height=312*dpr;c.style.width='312px';c.style.height='312px';
   ctx.scale(dpr,dpr);
-  const cx=130,cy=130,r=108,lw=13,startA=-Math.PI/2;
+  const cx=156,cy=156,r=130,lw=26,startA=-Math.PI/2;
   ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='#E8E0D4';ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
   if(progress<=0)return;
   if(progress<=1){
@@ -597,83 +605,85 @@ function renderStats(){
   const padL=Math.max(minL-2,1),padR=maxL+2,bk=padR-padL+1;
   const freq=new Array(bk).fill(0);lengths.forEach(l=>freq[l-padL]++);
   const prob=freq.map(f=>f/lengths.length),maxP=Math.max(...prob);
-
-  // compute predicted dates for each bar based on last period
   const last=r[r.length-1];
-
   const avgExact=(cycles.reduce((a,c)=>a+c.length,0)/cycles.length).toFixed(1);
+
   ct.innerHTML=`
-    <div class="stats-card"><h3>Average cycle length</h3><div class="stats-avg"><strong>${avgExact}</strong> days</div></div>
-    <div class="stats-card"><h3>Cycle length distribution</h3><div class="chart-wrap"><canvas id="chartC"></canvas></div></div>`;
+    <div id="statsFixed">
+      <div class="stats-card"><h3>Average cycle length</h3><div class="stats-avg"><strong>${avgExact}</strong> days</div></div>
+      <div class="stats-card"><h3>Cycle length distribution</h3><div class="chart-wrap"><canvas id="chartBar"></canvas></div></div>
+    </div>
+    <div id="dotChartWrap">
+      <div class="stats-card"><h3>Cycle history</h3><div class="chart-wrap"><canvas id="chartDot"></canvas></div></div>
+    </div>`;
 
   const dpr=window.devicePixelRatio||1;
-  const container=document.querySelector('#chartC').parentElement;
-  const cw=Math.min(container.clientWidth,440);
-  const mL=50,mR=16,mT=40,gap=32,barH=140;
-  const dotH=Math.max(120,cycles.length*20+40);
-  const totalH=mT+barH+gap+dotH+36;
-  const plotW=cw-mL-mR,bw=Math.max(plotW/bk-2,6);
-
-  const canvas=document.getElementById('chartC');
-  canvas.width=cw*dpr;canvas.height=totalH*dpr;canvas.style.width=cw+'px';canvas.style.height=totalH+'px';
-  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
   const ff=getComputedStyle(document.body).fontFamily;
   const pc='#C2724F',gc='#E8E0D4',tc='#8B8680',td2='#2D2B28';
+  const mL=50,mR=16,mT=40,barH=140;
 
+  /* ---- BAR CHART ---- */
+  const barCanvas=document.getElementById('chartBar');
+  const barContainer=barCanvas.parentElement;
+  const cw=Math.min(barContainer.clientWidth,440);
+  const plotW=cw-mL-mR,bw=Math.max(plotW/bk-2,6);
+  const barTotalH=mT+barH+32;
+  barCanvas.width=cw*dpr;barCanvas.height=barTotalH*dpr;
+  barCanvas.style.width=cw+'px';barCanvas.style.height=barTotalH+'px';
+  const bctx=barCanvas.getContext('2d');bctx.scale(dpr,dpr);
   function xP(v){return mL+(v-padL+.5)*(plotW/bk)}
 
   // date labels above bars
-  ctx.save();
-  ctx.textAlign='center';
-  ctx.fillStyle=tc;
+  bctx.save();bctx.textAlign='center';bctx.fillStyle=tc;
   for(let d=padL;d<=padR;d++){
-    const dateStr=addDays(last,d);
-    const dt=new Date(dateStr+'T00:00:00');
-    const mon=MSHORT[dt.getMonth()];
-    const day=Z(dt.getDate());
+    const dateStr=addDays(last,d),dt=new Date(dateStr+'T00:00:00');
     const x=xP(d);
-    ctx.font='7px '+ff;
-    ctx.textBaseline='bottom';
-    ctx.fillText(mon,x,mT-15);
-    ctx.font='bold 10px '+ff;
-    ctx.fillText(day,x,mT-3);
+    bctx.font='7px '+ff;bctx.textBaseline='bottom';bctx.fillText(MSHORT[dt.getMonth()],x,mT-15);
+    bctx.font='bold 10px '+ff;bctx.fillText(Z(dt.getDate()),x,mT-3);
   }
-  ctx.restore();
-
+  bctx.restore();
   const barBase=mT+barH;
   [0,.25,.5,.75,1].forEach(t=>{
     const v=t*maxP,y=barBase-(v/maxP)*barH*.85;
-    ctx.strokeStyle=gc;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(mL,y);ctx.lineTo(cw-mR,y);ctx.stroke();
-    ctx.fillStyle=tc;ctx.font='9px '+ff;ctx.textAlign='right';ctx.textBaseline='middle';
-    ctx.fillText((v*100).toFixed(0)+'%',mL-5,y);
+    bctx.strokeStyle=gc;bctx.lineWidth=.5;bctx.beginPath();bctx.moveTo(mL,y);bctx.lineTo(cw-mR,y);bctx.stroke();
+    bctx.fillStyle=tc;bctx.font='9px '+ff;bctx.textAlign='right';bctx.textBaseline='middle';
+    bctx.fillText((v*100).toFixed(0)+'%',mL-5,y);
   });
   prob.forEach((p,i)=>{if(!p)return;const x=xP(padL+i)-bw/2,h=(p/maxP)*barH*.85;
-    ctx.fillStyle=pc;const rr=Math.min(3,bw/2);
-    ctx.beginPath();ctx.moveTo(x+rr,barBase-h);ctx.arcTo(x+bw,barBase-h,x+bw,barBase,rr);
-    ctx.lineTo(x+bw,barBase);ctx.lineTo(x,barBase);ctx.arcTo(x,barBase-h,x+bw,barBase-h,rr);ctx.fill();
+    bctx.fillStyle=pc;const rr=Math.min(3,bw/2);
+    bctx.beginPath();bctx.moveTo(x+rr,barBase-h);bctx.arcTo(x+bw,barBase-h,x+bw,barBase,rr);
+    bctx.lineTo(x+bw,barBase);bctx.lineTo(x,barBase);bctx.arcTo(x,barBase-h,x+bw,barBase-h,rr);bctx.fill();
   });
-  ctx.textAlign='center';ctx.textBaseline='top';
+  bctx.textAlign='center';bctx.textBaseline='top';
   for(let d=padL;d<=padR;d++){
-    ctx.fillStyle=lengths.includes(d)?td2:tc;
-    ctx.font=(lengths.includes(d)?'bold ':'')+'9px '+ff;
-    ctx.fillText(d,xP(d),barBase+4);
+    bctx.fillStyle=lengths.includes(d)?td2:tc;
+    bctx.font=(lengths.includes(d)?'bold ':'')+'9px '+ff;
+    bctx.fillText(d,xP(d),barBase+4);
   }
-  ctx.fillStyle=tc;ctx.font='9px '+ff;ctx.fillText('Days',mL+plotW/2,barBase+18);
+  bctx.fillStyle=tc;bctx.font='9px '+ff;bctx.fillText('Days',mL+plotW/2,barBase+18);
 
-  // dot chart
-  const dTop=barBase+gap;const sorted=[...cycles].reverse();
-  const pY=16,yS=cycles.length>1?(dotH-pY*2)/(cycles.length-1):0;
-  ctx.textAlign='right';ctx.textBaseline='middle';
-  sorted.forEach((c,i)=>{const y=dTop+pY+i*yS;
-    ctx.strokeStyle=gc;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(mL,y);ctx.lineTo(cw-mR,y);ctx.stroke();
-    ctx.fillStyle=tc;ctx.font='9px '+ff;ctx.fillText(c.start,mL-5,y);
+  /* ---- DOT CHART ---- */
+  const dotCanvas=document.getElementById('chartDot');
+  const dotContainer=dotCanvas.parentElement;
+  const dcw=Math.min(dotContainer.clientWidth,440);
+  const pY=16,yS=24,dotH=Math.max(120,pY*2+(cycles.length-1)*yS+pY);
+  dotCanvas.width=dcw*dpr;dotCanvas.height=dotH*dpr;
+  dotCanvas.style.width=dcw+'px';dotCanvas.style.height=dotH+'px';
+  const dctx=dotCanvas.getContext('2d');dctx.scale(dpr,dpr);
+  const dplotW=dcw-mL-mR;
+  function xPd(v){return mL+(v-padL+.5)*(dplotW/bk)}
+  const sorted=[...cycles].reverse();
+  dctx.textAlign='right';dctx.textBaseline='middle';
+  sorted.forEach((c,i)=>{const y=pY+i*yS;
+    dctx.strokeStyle=gc;dctx.lineWidth=.5;dctx.beginPath();dctx.moveTo(mL,y);dctx.lineTo(dcw-mR,y);dctx.stroke();
+    dctx.fillStyle=tc;dctx.font='9px '+ff;dctx.fillText(c.start.slice(2),mL-5,y);
   });
-  ctx.strokeStyle=pc;ctx.lineWidth=2;ctx.beginPath();
-  sorted.forEach((c,i)=>{const x=xP(c.length),y=dTop+pY+i*yS;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
-  ctx.stroke();
-  sorted.forEach((c,i)=>{const x=xP(c.length),y=dTop+pY+i*yS;
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=pc;ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();
+  dctx.strokeStyle=pc;dctx.lineWidth=2;dctx.beginPath();
+  sorted.forEach((c,i)=>{const x=xPd(c.length),y=pY+i*yS;i===0?dctx.moveTo(x,y):dctx.lineTo(x,y)});
+  dctx.stroke();
+  sorted.forEach((c,i)=>{const x=xPd(c.length),y=pY+i*yS;
+    dctx.fillStyle='#fff';dctx.beginPath();dctx.arc(x,y,4.5,0,Math.PI*2);dctx.fill();
+    dctx.fillStyle=pc;dctx.beginPath();dctx.arc(x,y,3.5,0,Math.PI*2);dctx.fill();
   });
 }
 
