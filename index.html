@@ -35,7 +35,7 @@ nav{display:flex;background:var(--card);border-top:1px solid var(--card-border);
   padding:4px 0 env(safe-area-inset-bottom,6px);flex-shrink:0}
 nav button{flex:1;background:none;border:none;font-family:var(--font);font-size:10px;
   color:var(--text-ter);display:flex;flex-direction:column;align-items:center;gap:2px;
-  padding:10px 0;cursor:pointer;transition:color .2s}
+  padding:12px 0;cursor:pointer;transition:color .2s}
 nav button.active{color:var(--primary)}
 nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
@@ -138,13 +138,24 @@ nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width
 #viewStats .view-title{flex-shrink:0}
 #statsContent{display:flex;flex-direction:column;flex:1;overflow:hidden;padding-bottom:0}
 #statsFixed{flex-shrink:0}
-#dotChartWrap{overflow-y:auto;flex:1;padding-bottom:20px;-webkit-overflow-scrolling:touch}
+#statsCombinedCard{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);
+  box-shadow:var(--shadow);display:flex;flex-direction:column;flex:1;overflow:hidden;margin-bottom:20px}
+#statsBarSection{flex-shrink:0;padding:14px 16px 0}
+#statsBarHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+#statsBarHeader h3{font-size:13px;font-weight:600;color:var(--text-sec);margin:0}
+.bar-toggle{display:flex;background:var(--bg);border:1px solid var(--card-border);border-radius:20px;padding:2px;gap:2px}
+.bar-toggle button{border:none;background:none;font-family:var(--font);font-size:10px;font-weight:600;
+  color:var(--text-ter);padding:3px 9px;border-radius:16px;cursor:pointer;transition:all .2s}
+.bar-toggle button.active{background:var(--card);color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stats-divider{display:none}
+#statsDotSection{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 16px}
+#statsDotSection h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-sec);position:sticky;top:0;background:var(--card);padding-top:10px;z-index:1}
 .stats-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);
-  padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
-.stats-card h3{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-sec)}
-.stats-avg{text-align:center;padding:10px;font-size:14px;color:var(--text-sec)}
+  padding:8px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.stats-card h3{font-size:13px;font-weight:600;margin-bottom:4px;color:var(--text-sec)}
+.stats-avg{text-align:center;padding:4px;font-size:14px;color:var(--text-sec)}
 .stats-avg strong{font-size:28px;color:var(--primary);font-weight:700}
-.chart-wrap{width:100%;overflow-x:auto}
+.chart-wrap{width:100%;overflow:hidden}
 canvas{display:block}
 
 /* MODAL */
@@ -602,7 +613,7 @@ function renderStats(){
 
   const lengths=cycles.map(c=>c.length);
   const minL=Math.min(...lengths),maxL=Math.max(...lengths);
-  const padL=Math.max(minL-2,1),padR=maxL+2,bk=padR-padL+1;
+  const padL=minL,padR=maxL,bk=padR-padL+1;
   const freq=new Array(bk).fill(0);lengths.forEach(l=>freq[l-padL]++);
   const prob=freq.map(f=>f/lengths.length),maxP=Math.max(...prob);
   const last=r[r.length-1];
@@ -611,77 +622,102 @@ function renderStats(){
   ct.innerHTML=`
     <div id="statsFixed">
       <div class="stats-card"><h3>Average cycle length</h3><div class="stats-avg"><strong>${avgExact}</strong> days</div></div>
-      <div class="stats-card"><h3>Cycle length distribution</h3><div class="chart-wrap"><canvas id="chartBar"></canvas></div></div>
     </div>
-    <div id="dotChartWrap">
-      <div class="stats-card"><h3>Cycle history</h3><div class="chart-wrap"><canvas id="chartDot"></canvas></div></div>
+    <div id="statsCombinedCard">
+      <div id="statsBarSection">
+        <div id="statsBarHeader">
+          <h3>Cycle length distribution</h3>
+          <div class="bar-toggle">
+            <button id="btnAll" class="active">All</button>
+            <button id="btnRecent">Recent</button>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+      </div>
+      <div class="stats-divider"></div>
+      <div id="statsDotSection">
+        <h3>Cycle history</h3>
+        <div class="chart-wrap"><canvas id="chartDot"></canvas></div>
+      </div>
     </div>`;
 
   const dpr=window.devicePixelRatio||1;
   const ff=getComputedStyle(document.body).fontFamily;
   const pc='#C2724F',gc='#E8E0D4',tc='#8B8680',td2='#2D2B28';
-  const mL=50,mR=16,mT=40,barH=140;
+  const mL=50,mR=16,mT=46,barH=140;
+  const cw=Math.min(document.getElementById('statsCombinedCard').clientWidth-32,440);
+  const plotW=cw-mL-mR;
+  function xP(v,pL,bkN){return mL+(v-pL+.5)*(plotW/bkN)}
 
-  /* ---- BAR CHART ---- */
-  const barCanvas=document.getElementById('chartBar');
-  const barContainer=barCanvas.parentElement;
-  const cw=Math.min(barContainer.clientWidth,440);
-  const plotW=cw-mL-mR,bw=Math.max(plotW/bk-2,6);
-  const barTotalH=mT+barH+32;
-  barCanvas.width=cw*dpr;barCanvas.height=barTotalH*dpr;
-  barCanvas.style.width=cw+'px';barCanvas.style.height=barTotalH+'px';
-  const bctx=barCanvas.getContext('2d');bctx.scale(dpr,dpr);
-  function xP(v){return mL+(v-padL+.5)*(plotW/bk)}
+  function drawBar(filteredCycles){
+    const fLengths=filteredCycles.map(c=>c.length);
+    const fFreq=new Array(bk).fill(0);fLengths.forEach(l=>{if(l>=padL&&l<=padR)fFreq[l-padL]++});
+    const fProb=fFreq.map(f=>f/fLengths.length),fMaxP=Math.max(...fProb)||1;
+    const bw=Math.max(plotW/bk-2,6);
+    const barCanvas=document.getElementById('chartBar');
+    const barTotalH=mT+barH+32;
+    barCanvas.width=cw*dpr;barCanvas.height=barTotalH*dpr;
+    barCanvas.style.width=cw+'px';barCanvas.style.height=barTotalH+'px';
+    const bctx=barCanvas.getContext('2d');bctx.scale(dpr,dpr);
+    // date labels above bars
+    bctx.save();bctx.textAlign='center';bctx.fillStyle=tc;
+    for(let d=padL;d<=padR;d++){
+      const dt=new Date(addDays(last,d)+'T00:00:00');
+      const x=xP(d,padL,bk);
+      bctx.font='9px '+ff;bctx.textBaseline='bottom';bctx.fillText(MSHORT[dt.getMonth()],x,mT-22);
+      bctx.font='bold 13px '+ff;bctx.fillText(Z(dt.getDate()),x,mT-4);
+    }
+    bctx.restore();
+    const barBase=mT+barH;
+    [0,.25,.5,.75,1].forEach(t=>{
+      const v=t*fMaxP,y=barBase-(v/fMaxP)*barH*.85;
+      bctx.strokeStyle=gc;bctx.lineWidth=.5;bctx.beginPath();bctx.moveTo(mL,y);bctx.lineTo(cw-mR,y);bctx.stroke();
+      bctx.fillStyle=tc;bctx.font='9px '+ff;bctx.textAlign='right';bctx.textBaseline='middle';
+      bctx.fillText((v*100).toFixed(0)+'%',mL-5,y);
+    });
+    fProb.forEach((p,i)=>{if(!p)return;const x=xP(padL+i,padL,bk)-bw/2,h=(p/fMaxP)*barH*.85;
+      bctx.fillStyle=pc;const rr=Math.min(3,bw/2);
+      bctx.beginPath();bctx.moveTo(x+rr,barBase-h);bctx.arcTo(x+bw,barBase-h,x+bw,barBase,rr);
+      bctx.lineTo(x+bw,barBase);bctx.lineTo(x,barBase);bctx.arcTo(x,barBase-h,x+bw,barBase-h,rr);bctx.fill();
+    });
+    bctx.textAlign='center';bctx.textBaseline='top';
+    for(let d=padL;d<=padR;d++){
+      bctx.fillStyle=fLengths.includes(d)?td2:tc;
+      bctx.font=(fLengths.includes(d)?'bold ':'')+'9px '+ff;
+      bctx.fillText(d,xP(d,padL,bk),barBase+4);
+    }
+    bctx.fillStyle=tc;bctx.font='9px '+ff;bctx.fillText('Days',mL+plotW/2,barBase+18);
+  }
 
-  // date labels above bars
-  bctx.save();bctx.textAlign='center';bctx.fillStyle=tc;
-  for(let d=padL;d<=padR;d++){
-    const dateStr=addDays(last,d),dt=new Date(dateStr+'T00:00:00');
-    const x=xP(d);
-    bctx.font='7px '+ff;bctx.textBaseline='bottom';bctx.fillText(MSHORT[dt.getMonth()],x,mT-15);
-    bctx.font='bold 10px '+ff;bctx.fillText(Z(dt.getDate()),x,mT-3);
-  }
-  bctx.restore();
-  const barBase=mT+barH;
-  [0,.25,.5,.75,1].forEach(t=>{
-    const v=t*maxP,y=barBase-(v/maxP)*barH*.85;
-    bctx.strokeStyle=gc;bctx.lineWidth=.5;bctx.beginPath();bctx.moveTo(mL,y);bctx.lineTo(cw-mR,y);bctx.stroke();
-    bctx.fillStyle=tc;bctx.font='9px '+ff;bctx.textAlign='right';bctx.textBaseline='middle';
-    bctx.fillText((v*100).toFixed(0)+'%',mL-5,y);
+  drawBar(cycles);
+
+  // toggle
+  let showRecent=false;
+  document.getElementById('btnAll').addEventListener('click',()=>{
+    if(showRecent){showRecent=false;document.getElementById('btnAll').classList.add('active');
+    document.getElementById('btnRecent').classList.remove('active');drawBar(cycles);}
   });
-  prob.forEach((p,i)=>{if(!p)return;const x=xP(padL+i)-bw/2,h=(p/maxP)*barH*.85;
-    bctx.fillStyle=pc;const rr=Math.min(3,bw/2);
-    bctx.beginPath();bctx.moveTo(x+rr,barBase-h);bctx.arcTo(x+bw,barBase-h,x+bw,barBase,rr);
-    bctx.lineTo(x+bw,barBase);bctx.lineTo(x,barBase);bctx.arcTo(x,barBase-h,x+bw,barBase-h,rr);bctx.fill();
+  document.getElementById('btnRecent').addEventListener('click',()=>{
+    if(!showRecent){showRecent=true;document.getElementById('btnRecent').classList.add('active');
+    document.getElementById('btnAll').classList.remove('active');drawBar(cycles.slice(-18));}
   });
-  bctx.textAlign='center';bctx.textBaseline='top';
-  for(let d=padL;d<=padR;d++){
-    bctx.fillStyle=lengths.includes(d)?td2:tc;
-    bctx.font=(lengths.includes(d)?'bold ':'')+'9px '+ff;
-    bctx.fillText(d,xP(d),barBase+4);
-  }
-  bctx.fillStyle=tc;bctx.font='9px '+ff;bctx.fillText('Days',mL+plotW/2,barBase+18);
 
   /* ---- DOT CHART ---- */
   const dotCanvas=document.getElementById('chartDot');
-  const dotContainer=dotCanvas.parentElement;
-  const dcw=Math.min(dotContainer.clientWidth,440);
   const pY=16,yS=24,dotH=Math.max(120,pY*2+(cycles.length-1)*yS+pY);
-  dotCanvas.width=dcw*dpr;dotCanvas.height=dotH*dpr;
-  dotCanvas.style.width=dcw+'px';dotCanvas.style.height=dotH+'px';
+  dotCanvas.width=cw*dpr;dotCanvas.height=dotH*dpr;
+  dotCanvas.style.width=cw+'px';dotCanvas.style.height=dotH+'px';
   const dctx=dotCanvas.getContext('2d');dctx.scale(dpr,dpr);
-  const dplotW=dcw-mL-mR;
-  function xPd(v){return mL+(v-padL+.5)*(dplotW/bk)}
   const sorted=[...cycles].reverse();
   dctx.textAlign='right';dctx.textBaseline='middle';
   sorted.forEach((c,i)=>{const y=pY+i*yS;
-    dctx.strokeStyle=gc;dctx.lineWidth=.5;dctx.beginPath();dctx.moveTo(mL,y);dctx.lineTo(dcw-mR,y);dctx.stroke();
-    dctx.fillStyle=tc;dctx.font='9px '+ff;dctx.fillText(c.start.slice(2),mL-5,y);
+    dctx.strokeStyle=gc;dctx.lineWidth=.5;dctx.beginPath();dctx.moveTo(mL,y);dctx.lineTo(cw-mR,y);dctx.stroke();
+    dctx.fillStyle=tc;dctx.font='9px ui-monospace,Menlo,monospace';dctx.fillText(c.start.slice(2),mL-5,y);
   });
   dctx.strokeStyle=pc;dctx.lineWidth=2;dctx.beginPath();
-  sorted.forEach((c,i)=>{const x=xPd(c.length),y=pY+i*yS;i===0?dctx.moveTo(x,y):dctx.lineTo(x,y)});
+  sorted.forEach((c,i)=>{const x=xP(c.length,padL,bk),y=pY+i*yS;i===0?dctx.moveTo(x,y):dctx.lineTo(x,y)});
   dctx.stroke();
-  sorted.forEach((c,i)=>{const x=xPd(c.length),y=pY+i*yS;
+  sorted.forEach((c,i)=>{const x=xP(c.length,padL,bk),y=pY+i*yS;
     dctx.fillStyle='#fff';dctx.beginPath();dctx.arc(x,y,4.5,0,Math.PI*2);dctx.fill();
     dctx.fillStyle=pc;dctx.beginPath();dctx.arc(x,y,3.5,0,Math.PI*2);dctx.fill();
   });
